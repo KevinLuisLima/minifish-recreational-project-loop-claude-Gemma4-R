@@ -1,0 +1,97 @@
+═══════════════════════════════════════════════════
+ETAPA 1 — PERGUNTAS TÉCNICAS
+═══════════════════════════════════════════════════
+
+Após ler tudo dentro da etapa 2, faça entre 6 e 9 perguntas para preencher os pilares do SDD de loop.
+As perguntas devem cobrir:
+
+OBJETIVO:
+- Qual é o resultado concreto que o loop deve produzir?
+- Como esse resultado deve ser entregue (arquivo, componente, saída no terminal)?
+
+FRONTEIRA:
+- O que a IA NÃO pode alterar durante o loop?
+- Existem restrições de tecnologia, biblioteca ou abordagem?
+- O que acontece se a IA "resolver" o problema de um jeito indesejado?
+
+MÉTRICA (critério de parada):
+- Como vamos saber que o loop terminou com sucesso?
+- Existe um teste, um comando ou uma verificação visual que confirma isso?
+- O que a IA deve fazer quando a verificação falha — tentar de novo, pedir ajuda, parar?
+
+CASOS EXTREMOS:
+- Quais situações podem quebrar o comportamento esperado?
+- Quais inputs inválidos ou estados inesperados o sistema precisa tratar?
+
+SEPARAÇÃO DE RESPONSABILIDADES:
+- Quais arquivos ou funções fazem o quê?
+- O que cada parte do sistema NÃO deve fazer?
+
+Apresente as perguntas numeradas.
+Para cada uma, ofereça uma sugestão entre parênteses:
+(Se não souber, responda "decida por mim" e eu escolho a opção mais adequada para o seu produto)
+
+Aguarde minha resposta a todas as perguntas antes de continuar.
+
+═══════════════════════════════════════════════════
+ETAPA 2 — MISSÃO DO LOOP
+═══════════════════════════════════════════════════
+
+────────────────────────────────────────
+1. OBJETIVO DO LOOP
+────────────────────────────────────────
+Escreva, em linguagem C um projeto de programação para resolver o seguinte desafio:
+You're challenged to devise innovative and efficient solutions to play chess against other agents, thereby further expanding the frontiers of AI research.
+Your exploration of novel, optimized techniques can address a growing complexity and scale of problems, like advancements in modeling and inference techniques
+and improvements upon traditional heuristic-based algorithms.
+Além disso, crie arquivos .py capazes de modificar os pesos das variáveis criadas.
+
+────────────────────────────────────────
+2. FRONTEIRAS (O QUE NÃO FAZER)
+────────────────────────────────────────
+Utilizar outras bases de dados que não seja a específica;
+Usar bibliotecas que realizem de forma completamente automatizada o treinamento
+
+────────────────────────────────────────
+3. MÉTRICA DE CONCLUSÃO (CRITÉRIO DE PARADA)
+────────────────────────────────────────
+Coloque um timer de 15 minutos para gerar código, após isso, inicialize o processo de realização de testes de integração. Após a etapa de testes for finalizada, edite (ou crie) o arquivo "skills.md"
+e retorne as dificuldades encontradas para o usuário.
+Caso não seja possível realizar o acima após "decida por mim" tentativas, relate o problema ao usuário e torne explícito quais testes falharam.
+
+────────────────────────────────────────
+4. ALGORITMOS E REGRAS DE NEGÓCIO
+────────────────────────────────────────
+O sistema deverá funcionar de forma a gerar modelos com variáveis levemente diferentes que consigam jogar xadrez. Ao final de "decida por mim"
+iterações, é apresentado o modelo para o usuário final, junto com sua porcentagem de vitórias em relação aos outros modelos, e
+uma tabela com a quantidade de movimentos sub-ótimos realizados pelo mesmo.
+Caso modelos estejam empatados, o critério de desempate deve ser o menor valor de movimentos sub-ótimos realizados por ação.
+Lógica principal descrita em linguagem natural dentro do código, passo a passo.
+Casos de teste mínimos esperados:
+- chamada de criação dos modelos;
+- testes de implementação do "tabuleiro";
+- chamada de ação do modelo escolhido;
+- testes de vazamento dos modelos.
+
+────────────────────────────────────────
+5. SEPARAÇÃO DE RESPONSABILIDADES
+────────────────────────────────────────
+O projeto deve seguir práticas de boa programação, com o padrão de design behavioral "template method".
+
+────────────────────────────────────────
+6. CASOS EXTREMOS
+────────────────────────────────────────
+Caso qualquer problema que quebre o fluxo do código apareça, analise, itere e caso as tentativas ultrapassem "decida por mim",
+retrabalhe a lógica de implementação escrita.
+
+────────────────────────────────────────
+7. STACK TÉCNICA
+────────────────────────────────────────
+base de dados para ser usada: "https://huggingface.co/datasets/linrock/bullet-training-data/tree/main" (não baixe os dados, consuma a API do huggingface)
+base de como o projeto deve ser estruturado: "https://github.com/linrock/minifish"
+
+────────────────────────────────────────
+8. DOCUMENTAÇÃO E PASSOS FINAIS
+────────────────────────────────────────
+Ao finalizar uma iteração do loop, crie um arquivo skills.md e relate a documentação, o que cada classe faz, e adicione uma seção para descrever as informações aprendidas durante o desenvolvimento.
+Além das informações repassadas pelo usuário, adicione informações sobre tentativas. O que foi realizado e o que precisou ser refeito, o que deu certo, tarefas que não foram finalizadas e possíveis melhorias.

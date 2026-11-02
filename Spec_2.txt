@@ -1,0 +1,41 @@
+────────────────────────────────────────
+1. OBJETIVO DE EVOLUÇÃO
+────────────────────────────────────────
+Aprimorar a precisão do motor de xadrez integrando a busca Alpha-Beta e a
+validação real de movimentos sub-ótimos comparando as jogadas com engines de referência.
+
+────────────────────────────────────────
+2. NOVAS FRONTEIRAS
+────────────────────────────────────────
+- Manter a compatibilidade com o padrão Template Method em C.
+- Não alterar a estrutura de Bitboards já validada.
+- Implementar a limpeza de memória (Memory Leak Prevention) em todos os novos módulos.
+
+────────────────────────────────────────
+3. MÉTRICAS DE PERFORMANCE (KPIs)
+────────────────────────────────────────
+O sucesso da evolução será medido por:
+- Redução do tempo de busca por movimento (ms).
+- Aumento da correlação entre a Winrate do modelo e a pontuação de Elo estimada.
+- Zero vazamentos de memória detectados via Valgrind.
+
+────────────────────────────────────────
+4. NOVAS REGRAS DE NEGÓCIO
+────────────────────────────────────────
+- A lógica de "Movimentos Sub-ótimos" deve agora ser calculada comparando
+  a escolha do modelo com a melhor jogada de um arquivo de logs (PGN).
+- O sistema de pesos deve suportar a leitura de tensores compressos (.nnue).
+
+────────────────────────────────────────
+5. STACK TÉCNICA EXPANDIDA
+────────────────────────────────────────
+- Base de dados: Integrar a API do HuggingFace via biblioteca 'requests' (Python).
+- Ferramentas de análise: Utilizar 'Valgrind' para certificação de memória.
+- Referência: Aprofundar a implementação baseada no repositório 'minifish'.
+
+────────────────────────────────────────
+6. DOCUMENTAÇÃO CONTÍNUA
+────────────────────────────────────────
+O arquivo 'skills.md' deve ser atualizado a cada nova iteração do loop,
+registrando a evolução da winrate dos modelos e as novas técnicas de busca implementadas.
+═══════════════════════════════════════════════════
