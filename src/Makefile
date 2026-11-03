@@ -2,7 +2,7 @@ CC = gcc
 CFLAGS = -O3 -Wall -Wextra
 LDFLAGS = -lm
 
-SRC = main.c bitboard.c evaluation.c position.c search.c
+SRC = main.c bitboard.c position.c movegen.c evaluation.c search.c tournament.c
 OBJ = $(SRC:.c=.o)
 TARGET = chess_engine
 
@@ -15,6 +15,10 @@ $(TARGET): $(OBJ)
 	$(CC) $(CFLAGS) -c $< -o $@
 
 clean:
-	rm -f $(OBJ) $(TARGET) *.bin
+	rm -f $(OBJ) $(TARGET)
 
-.PHONY: all clean
+distclean:
+	$(MAKE) clean
+	rm -rf weights/*.bin
+
+.PHONY: all clean distclean

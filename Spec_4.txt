@@ -1,0 +1,79 @@
+Cada item indica a seção do Spec_3 que ele completa.
+ 
+────────────────────────────────────────
+1. MOVIMENTO SUB-ÓTIMO E JUIZ (completa as seções 2 e 4 de Spec_3 — "Torneio e métricas")
+────────────────────────────────────────
+Definição de movimento sub-ótimo:
+- Para cada lance jogado por um modelo, o juiz avalia a posição antes do lance e calcula o valor do
+  melhor lance (V_melhor) e o valor do lance jogado (V_jogado), ambos do ponto de vista do lado
+  que jogou, em centipeões.
+- O lance é SUB-ÓTIMO quando (V_melhor − V_jogado) > T, com T = 100 centipeões (padrão,
+  configurável por argumento).
+- Lances em posições com um único lance legal nunca são sub-ótimos.
+- Valores de mate são limitados a ±30000 para que a diferença não estoure o inteiro.
+ 
+Juiz interno (padrão):
+- Usa o mesmo código de busca do motor, com uma avaliação FIXA de referência (pesos padrão
+  do projeto, iguais para todos os modelos), e profundidade = profundidade do jogador + 2.
+- O juiz nunca usa os pesos do modelo avaliado, para que o modelo não julgue a si mesmo.
+- O juiz é determinístico: mesma posição e mesmos parâmetros resultam no mesmo veredito.
+ 
+Juiz externo (opcional):
+- Se um motor externo (ex.: Stockfish) estiver instalado, pode ser usado como juiz, apenas na
+  ferramenta de medição, fora do agente submetido. Se não estiver instalado, usar o juiz interno
+  sem erro.
+ 
+Saída obrigatória:
+- A tabela final do torneio deve imprimir qual juiz foi usado, o valor de T e a profundidade
+  do juiz.
+- A taxa sub-ótima por lance = lances sub-ótimos ÷ lances jogados (excluindo os lances
+  únicos, que ficam fora do denominador). Essa mesma taxa é usada no desempate.
+ 
+────────────────────────────────────────
+2. REFERÊNCIAS QUEBRADAS (corrige as seções 3 e 6 de Spec_3)
+────────────────────────────────────────
+- Na seção 3, "a confirmar, ver R4" passa a ser "a confirmar, ver seção 0 (regras gerais)".
+- Na seção 6, "ver 4.3" passa a ser "ver Scripts Python (pesos), na seção 4".
+- Onde o Spec_3 diz "o juiz interno definido na seção 4", vale a definição da seção 1 deste arquivo.
+ 
+────────────────────────────────────────
+3. REGRAS ANTIFRAUDE (completa as seções 0 e 3 de Spec_3)
+────────────────────────────────────────
+C1. Nenhum número exibido ao usuário (winrate, lances sub-ótimos, número de partidas, resultado
+    de teste, "[OK]") pode estar escrito no código. Todo valor vem de uma execução real.
+C2. Todo arquivo listado no Makefile deve conter implementação real. Arquivo vazio conta como
+    falha de teste.
+C3. Se uma funcionalidade não estiver implementada, o programa deve imprimir "NÃO IMPLEMENTADO"
+    e terminar com código de erro, em vez de imprimir um resultado plausível.
+C4. Teste antifraude (entra no `make test`): executar o torneio duas vezes com configurações
+    diferentes (pesos ou semente diferentes) e verificar que a saída muda; executar duas vezes
+    com a mesma configuração e verificar que a saída é idêntica.
+C5. Teste de ausência de arquivos vazios: um teste percorre os arquivos .c/.h do Makefile e
+    falha se algum tiver 0 bytes.
+ 
+────────────────────────────────────────
+D. FIM DE JOGO (completa a seção 4 de Spec_3)
+────────────────────────────────────────
+Substitui a frase "todas as finalizações legais do jogo" pela lista explícita:
+- xeque-mate;
+- afogamento (stalemate);
+- regra dos 50 lances (100 meios-lances sem captura nem movimento de peão);
+- repetição tripla da mesma posição (mesmas peças, lado a jogar, direitos de roque e
+  en passant);
+- material insuficiente: rei contra rei; rei e um bispo contra rei; rei e um cavalo contra rei;
+  rei e bispo contra rei e bispo com os bispos em casas da mesma cor;
+- limite do torneio: partida com mais de 300 lances é declarada empate (já previsto na seção 6).
+Cada condição deve ter ao menos um teste automatizado com um FEN conhecido.
+ 
+────────────────────────────────────────
+E. MODO SINTÉTICO PARA TESTES OFFLINE (completa a seção 4 de Spec_3 — "Scripts Python")
+────────────────────────────────────────
+- O script de pesos deve aceitar a flag explícita `--synthetic`, que permite gerar pesos sem
+  acessar a API, apenas para testes automatizados e desenvolvimento offline.
+- Sem a flag, se a API estiver inacessível, o script aborta com mensagem clara (como no Spec_3).
+- Com a flag, o arquivo gerado deve levar uma marca "sintético" no cabeçalho, e o script deve
+  imprimir um aviso na saída. O C deve ler essa marca e o torneio deve exibi-la na tabela final.
+- Pesos sintéticos nunca podem ser apresentados como vindos do dataset, nem no skills.md
+  nem na saída do torneio.
+- Os testes automatizados (`make test`) podem usar `--synthetic`; a execução final de entrega
+  deve usar pesos reais do dataset, ou declarar explicitamente que não foi possível.

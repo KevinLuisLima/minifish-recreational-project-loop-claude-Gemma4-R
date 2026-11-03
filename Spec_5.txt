@@ -1,0 +1,285 @@
+Este arquivo reúne as mudanças exigidas depois da revisão do código. Ele não repete o que já está
+no Spec_3 e no Spec_4. Em caso de conflito, vale este arquivo. Todo valor numérico marcado como
+"esperado" foi calculado e deve ser reproduzido pelo código; divergência é falha de teste.
+
+────────────────────────────────────────
+A. PORTÕES DE VERIFICAÇÃO (ordem obrigatória de implementação)
+────────────────────────────────────────
+Cada portão só pode ser iniciado quando o anterior passar, verificado por comando real.
+G1. Build limpo: `make` sem erros e sem warnings (-Wall -Wextra). Todos os .c do projeto, inclusive
+    tournament.c, estão no Makefile. Não pode haver código duplicado nem resíduo de edição.
+G2. Posição e ataques: FEN, tabelas de ataque e detecção de xeque passam em T-ATK e T-FEN (seção B).
+G3. Geração de lances: passa em T-GEN e no perft (seção C). Nada além disso é implementado antes.
+G4. Fim de jogo: passa em T-END (seção F).
+G5. Busca (Template Method): passa em T-SEARCH (seção G).
+G6. Pesos: passa em T-W (seção D) e o script de pesos funciona (seção E).
+G7. Torneio real: passa em T-TOUR (seção H).
+G8. Interface Kaggle: passa em T-IO e T-WRAP (seção I).
+G9. skills.md conforme a seção J.
+Se um portão falhar após o limite de tentativas do Spec_3, parar e relatar quais testes falharam.
+
+────────────────────────────────────────
+B. ATAQUES, FEN E XEQUE (corrige bitboard.c e position.c)
+────────────────────────────────────────
+Regras de implementação:
+- Máscaras de coluna de peão: para um peão branco, o deslocamento <<7 anda uma coluna para a esquerda
+  e deve excluir resultados na coluna h; o <<9 anda para a direita e deve excluir resultados na
+  coluna a. Para o peão preto vale o espelho (>>7 exclui coluna a; >>9 exclui coluna h).
+  As máscaras do código atual estão trocadas.
+- Funções de ataque públicas não podem ser rascunho: remover `get_knight_attacks` com "Mock mask",
+  `knight_attacks_sq` e variáveis não usadas, ou implementá-las corretamente e usá-las.
+- `is_square_attacked(sq, atacante)`: para detectar peões, calcular os ataques de peão da cor
+  OPOSTA ao atacante a partir de sq e cruzar com os peões do atacante.
+- `load_fen`: validar o buffer (terminar a string), os limites de coluna e linha (nunca gerar
+  deslocamento fora de 0–63), exatamente um rei por cor, e rejeitar campos malformados.
+  A casa de en passant usa o mesmo índice das demais (a1 = 0): "d3" deve resultar em 19.
+- `export_fen` deve existir (já declarada) e fazer ida e volta com `load_fen`.
+- `get_bit`, `set_bit` e `clear_bit` validam a faixa 0–63 (assert em modo debug).
+
+Testes T-ATK e T-FEN (valores esperados):
+- Peão branco em a2: ataques = somente b3. Peão branco em h2: somente g3.
+  Peão preto em h7: somente g6. Peão branco em e4: d5 e f5.
+- Cavalo em a1: b3 e c2. Cavalo em e4: 8 casas.
+- Torre em d4 com peça em d6: alcança d5 e d6 (captura) e não passa de d6.
+- Rei em h1: 3 casas.
+- FEN "rnbqkbnr/pppp1ppp/8/8/3Pp3/8/PPP1PPPP/RNBQKBNR b KQkq d3 0 1": enPassantSquare = 19.
+- FEN "7k/8/8/8/8/8/3p4/4K3 w - - 0 1": o rei branco está em xeque (peão preto em d2).
+- FEN "4r3/8/8/8/8/8/8/4K2k w - - 0 1": o rei branco está em xeque (torre).
+- FENs inválidos devem ser rejeitados: "garbage", FEN sem rei, FEN com 9 colunas numa linha,
+  FEN com dois reis brancos.
+- export_fen(load_fen(x)) == x para pelo menos 5 FENs válidos.
+
+────────────────────────────────────────
+C. GERAÇÃO DE LANCES (corrige position.c, novo módulo movegen.c)
+────────────────────────────────────────
+Separar a geração de lances de position.c para movegen.c/h, como previsto no Spec_3.
+
+Regras de implementação:
+- Os lances de cada peça só podem terminar em casas que NÃO contêm peça da mesma cor
+  (máscara por ~occupancy[cor]). O motor não pode capturar peça própria.
+- Peões: avanço de uma casa para casa vazia; avanço de duas casas da linha inicial com as duas
+  casas vazias; capturas diagonais SOMENTE sobre peça adversária ou casa de en passant;
+  en passant; promoção para dama, torre, bispo e cavalo (4 lances) tanto no avanço quanto na captura.
+- Roque: gerado só com o direito presente, casas entre rei e torre vazias e rei sem passar por
+  casa atacada nem estando em xeque. make_move atualiza os direitos de roque (mover rei, mover ou
+  capturar torre) e move a torre.
+- En passant: make_move remove o peão capturado, e a casa de en passant é definida após avanço
+  duplo e limpa nos demais lances. O lance é rejeitado se deixar o próprio rei em xeque.
+- make_move atualiza halfmoveClock, fullmoveNumber, sideToMove e as ocupações.
+- Move deve carregar a informação suficiente para desfazer (peça movida, peça capturada,
+  direitos de roque e en passant anteriores) e `unmake_move` deve restaurar a posição sem copiar a
+  Board inteira, ou então a cópia de posição deve ser usada de forma documentada e consistente
+  em todo o código (busca, torneio e testes). O estado após make+unmake deve ser idêntico ao inicial.
+
+Testes T-GEN (valores esperados):
+- Posição inicial: 20 lances legais; nenhum termina em casa ocupada por peça própria.
+- "r3k2r/8/8/8/8/8/8/R3K2R w KQkq - 0 1": 26 lances legais, dos quais 2 são roques (e1g1, e1c1).
+- "8/P6k/8/8/8/8/8/K7 w - - 0 1": 7 lances legais, dos quais 4 são promoções (a7a8q, a7a8r, a7a8b, a7a8n).
+- "R5k1/5ppp/8/8/8/8/8/4K3 b - - 0 1": 0 lances legais e rei preto em xeque (xeque-mate).
+- "7k/5Q2/6K1/8/8/8/8/8 b - - 0 1": 0 lances legais e rei preto fora de xeque (afogamento).
+- Para cada posição de teste: make_move seguido de unmake_move restaura todos os campos da Board.
+
+Perft (portão G3; contagem de nós de folhas, todos os valores esperados):
+- Posição inicial: prof. 1 = 20; prof. 2 = 400; prof. 3 = 8.902; prof. 4 = 197.281; prof. 5 = 4.865.609.
+- Kiwipete "r3k2r/p1ppqpb1/bn2pnp1/3PN3/1p2P3/2N2Q1p/PPPBBPPP/R3K2R w KQkq - 0 1":
+  prof. 1 = 48; prof. 2 = 2.039; prof. 3 = 97.862; prof. 4 = 4.085.603.
+- Posição 3 "8/2p5/3p4/KP5r/1R3p1k/8/4P1P1/8 w - - 0 1":
+  prof. 1 = 14; prof. 2 = 191; prof. 3 = 2.812; prof. 4 = 43.238; prof. 5 = 674.624.
+- O programa deve oferecer `chess_engine --perft N "<FEN>"` e imprimir o total.
+- Em caso de divergência, o teste imprime o perft "divide" (contagem por lance) para localizar o erro.
+
+────────────────────────────────────────
+D. PESOS: FORMATO, CARREGAMENTO E AVALIAÇÃO (corrige evaluation.c/h)
+────────────────────────────────────────
+Cabeçalho do arquivo (little-endian), nesta ordem:
+ - magic "CHSS" (4 bytes);
+ - versão do formato (uint8; versão atual = 1);
+ - origem (uint8): 0 = ajustado com amostra do dataset; 1 = sintético;
+ - número de pesos (uint16);
+ - os pesos em float32.
+Vetor único de pesos (padrão; pode ser alterado com "decida por mim", desde que documentado):
+ - 5 valores de material (peão, cavalo, bispo, torre, dama; o rei não entra);
+ - 6 × 64 valores de tabelas de casas (peão, cavalo, bispo, torre, dama, rei);
+ - termos simples: mobilidade, peão dobrado, peão isolado, segurança do rei.
+ Total padrão: 393 pesos.
+
+Regras de carregamento:
+- Ler cada campo com tamanho exato (sem ler 1 byte dentro de um int não inicializado).
+- Rejeitar: arquivo ausente, magic errado, versão diferente, contagem diferente da esperada,
+  leitura incompleta, qualquer valor NaN ou Inf.
+- Em caso de rejeição, `load_weights` devolve código de erro. O programa NÃO segue jogando com
+  pesos nulos: ou usa o motor básico por decisão explícita do usuário (flag `--basic`) ou termina
+  com erro.
+- Carregar duas vezes no mesmo motor não vaza memória (liberar o vetor anterior).
+- Verificar o retorno de todo malloc, fopen e fread. Nenhuma mensagem de log vai para stdout
+  (ver seção I).
+- A origem (dataset/sintético) fica guardada no motor e é exposta ao torneio.
+
+Avaliação:
+- Relativa ao lado a jogar (já implementado; manter).
+- O modelo com pesos (hf) deve usar material + tabelas de casas + os termos simples do vetor.
+  O modelo básico não pode ser o único com tabelas de casas.
+- O Rei não entra no material.
+- Dois modelos gerados com sementes diferentes devem diferir de forma significativa em material
+  E em tabelas de casas (ver teste T-W).
+
+Testes T-W:
+- Carregar um arquivo válido e imprimir a origem corretamente.
+- Rejeitar: arquivo vazio, truncado, magic errado, versão 2, contagem errada, NaN, Inf.
+- 1000 ciclos de criar, carregar duas vezes e destruir: 0 vazamentos sob ASan.
+- Dois modelos de sementes diferentes: diferença média relativa ≥ 1% nos pesos de material e nas
+  tabelas, e a avaliação de ao menos 3 posições de teste difere entre eles.
+
+────────────────────────────────────────
+E. SCRIPT DE PESOS (corrige weights_manager.py)
+────────────────────────────────────────
+- O script PRECISA acessar a API do HuggingFace para obter uma amostra pequena do dataset em
+  streaming (nada de baixar o dataset inteiro) e registrar na saída o endpoint usado e o tamanho
+  da amostra. Esses dois dados também entram no skills.md.
+- O ajuste dos pesos é implementado no próprio projeto (ex.: tuning tipo Texel: minimizar o erro
+  entre o resultado das posições da amostra e uma sigmóide da avaliação, por busca local ou
+  gradiente simples). Cada modelo parte de pontos iniciais ou subconjuntos diferentes da amostra,
+  controlados por semente.
+- Se o formato da amostra não puder ser lido pelo script, ele deve informar isso claramente e
+  encerrar com código de erro; não pode inventar o resultado.
+- Sem `--synthetic`: se a API estiver inacessível, ABORTAR. Nunca gerar pesos "reais" a partir de
+  constantes fixas.
+- Com `--synthetic`: gerar pesos sintéticos, escrever origem = 1 no cabeçalho e imprimir aviso.
+  Origem = 0 só pode ser escrita quando o ajuste com a amostra do dataset realmente aconteceu.
+- Escrever o cabeçalho completo da seção D (versão, origem, contagem) com `struct` e ordem de
+  bytes explícita "<".
+- Interface de linha de comando: número de modelos, fator de variação, semente, diretório de saída,
+  tamanho da amostra, `--synthetic`. Os arquivos vão para um diretório próprio (padrão: `weights/`).
+- Testes Python: formato do arquivo, semente reproduzível (mesma semente = arquivos idênticos),
+  sementes diferentes = arquivos diferentes, abortar sem API e sem `--synthetic`.
+
+────────────────────────────────────────
+F. FIM DE JOGO (corrige check_game_over; complementa o Spec_4 seção D)
+────────────────────────────────────────
+- `check_game_over` deve ser realmente usada pelo laço de partida do torneio e devolver o motivo
+  (mate, afogamento, 50 lances, repetição tripla, material insuficiente, limite de 300 lances).
+- Material insuficiente é só: rei contra rei; rei e um bispo contra rei; rei e um cavalo contra rei;
+  rei e bispo contra rei e bispo com bispos de mesma cor de casa. Rei e dama contra rei NÃO é
+  fim de jogo.
+- Repetição tripla exige um histórico de hashes de posição (peças, lado, roque, en passant).
+- Testes T-END, cada um com FEN conhecido:
+  mate "R5k1/5ppp/8/8/8/8/8/4K3 b - - 0 1"; afogamento "7k/5Q2/6K1/8/8/8/8/8 b - - 0 1";
+  50 lances (halfmoveClock = 100); material insuficiente (os 4 casos acima);
+  NÃO é fim de jogo: "4k3/8/8/8/8/8/8/3QK3 w - - 0 1" (rei e dama contra rei);
+  repetição tripla: sequência de lances que repete a posição 3 vezes;
+  limite de 300 lances.
+
+────────────────────────────────────────
+G. BUSCA E TEMPLATE METHOD (corrige search.c/h e evaluation.h)
+────────────────────────────────────────
+- O esqueleto fixo é `search_best_move(board, config, hooks)`, que executa sempre os mesmos passos:
+  (1) gerar os lances legais; (2) se houver 0 lances, devolver mate/afogamento; (3) se houver
+  1 lance, devolvê-lo na hora; (4) aprofundamento iterativo, de 1 até a profundidade máxima ou até
+  esgotar o tempo; (5) em cada profundidade, negamax com poda alpha-beta; (6) busca de quiescência
+  nas folhas (capturas); (7) guardar o melhor lance da última profundidade COMPLETA e devolvê-lo.
+- Os passos que variam por modelo são os "hooks" (ponteiros de função em uma struct): `evaluate`,
+  `order_moves` (mínimo: capturas por MVV-LVA, melhor lance da iteração anterior primeiro) e
+  `should_stop` (limite de tempo e de nós). O esqueleto não pode ser sobrescrito.
+- O `EvaluationEngine` sozinho (struct com ponteiros de função) é o padrão Strategy. Os comentários
+  e o skills.md não podem chamá-lo de Template Method. Cada módulo documenta qual padrão usa.
+- Controle de tempo: orçamento por lance configurável (padrão 70% do limite de 10 s, a confirmar
+  nas regras oficiais); a busca verifica o tempo a cada N nós e abandona a iteração em andamento
+  sem corromper o melhor lance anterior.
+- Pontuação de mate dependente da distância (mate mais rápido vale mais), com valores limitados a
+  ±30000 (compatível com o juiz do Spec_4).
+- Testes T-SEARCH:
+  mate em 1 "6k1/5ppp/8/8/8/8/8/R3K3 w - - 0 1": o lance é a1a8;
+  posição com um único lance legal: devolve-o sem buscar;
+  posição sem lances legais: sinaliza mate ou afogamento, sem lance;
+  o lance devolvido é sempre um dos lances legais, em 200 posições aleatórias de partidas jogadas;
+  o tempo por lance nunca excede o orçamento (com margem medida);
+  com a mesma posição e os mesmos parâmetros, o resultado é determinístico.
+
+────────────────────────────────────────
+H. TORNEIO REAL (substitui o tournament.c simulado)
+────────────────────────────────────────
+- É proibido qualquer contador alterado sem partida jogada. Todo `wins`, `draws`, `losses`,
+  `moves_played` e `suboptimal_moves` vem de um laço de partida real:
+  1. posição inicial vinda de um livro curto de aberturas (2–4 meios-lances), alternando as cores;
+  2. a cada vez, o modelo da vez escolhe o lance com `search_best_move`;
+  3. o juiz (Spec_4 seção A) avalia o lance, com o contador de sub-ótimos atualizado;
+  4. aplica o lance e chama `check_game_over`; encerra com o resultado e o motivo.
+- A winrate de um modelo = (vitórias + 0,5 × empates) ÷ partidas disputadas por ele (não
+  ÷ número de modelos − 1). Empates são contados.
+- O número de partidas é configurável (por par) e impresso. Todo valor impresso vem de contadores.
+- Cada modelo carrega os seus pesos uma única vez (não recarregar a cada partida).
+- A marca de origem do arquivo (dataset/sintético) é lida do motor e aparece na tabela final.
+- `main.c` expõe o torneio por `chess_engine --tournament <arquivos de pesos...> [opções]`.
+  Com menos de 2 modelos: erro claro.
+- O juiz deve ser realmente usado, determinístico e independente dos pesos do modelo avaliado.
+- Testes T-TOUR:
+  soma de partidas = vitórias + empates + derrotas para cada modelo;
+  duas execuções com a mesma configuração dão saídas idênticas (determinismo);
+  configuração diferente (pesos ou semente) muda a saída;
+  torneio com 2 modelos idênticos: winrates de 50% e desempate pelo critério do Spec_3;
+  o torneio nunca devolve um número fixo (teste que busca no código-fonte constantes como "+= 40").
+
+────────────────────────────────────────
+I. INTERFACE DO MOTOR E DO KAGGLE (corrige main.c e agent_wrapper.py)
+────────────────────────────────────────
+Contrato de saída do motor:
+- Em modo de jogo (`chess_engine "<FEN>" [pesos]`), a saída padrão contém SOMENTE o lance em UCI
+  (regex ^[a-h][1-8][a-h][1-8][qrbn]?$), com sufixo de promoção quando houver, seguido de quebra
+  de linha. Mensagens de log, avisos e erros vão para a saída de erro (stderr).
+- Sem lance legal: não imprime lance e termina com código de saída diferente de 0 e mensagem em stderr.
+- Modos adicionais: `--list-moves "<FEN>"` (lista os lances legais em UCI, um por linha),
+  `--perft N "<FEN>"`, `--tournament ...` e `--basic` (usar o motor básico de propósito).
+- Sem pesos informados, o motor deve avisar em stderr qual modelo está usando; falha de
+  carregamento não vira motor básico em silêncio (ver seção D).
+- Sem warnings de `sprintf`: usar buffers com tamanho correto ou `snprintf`.
+
+Wrapper Python (agent_wrapper.py):
+- Localizar o binário relativo ao diretório do próprio script (e não ao diretório atual), com o nome
+  configurável por variável de ambiente. O caminho padrão deve coincidir com o que o Makefile gera.
+- Usar `timeout` na chamada do subprocesso, menor que o limite de 10 s por lance.
+- Validar o texto devolvido pelo motor com a regex acima e conferir se o lance está em
+  `--list-moves`. Se a validação falhar, o wrapper escolhe um lance LEGAL de contingência a partir
+  da lista de lances legais (nunca um lance fixo como "e2e4").
+- FEN inválido ou posição sem lances: erro tratado e código de retorno definido; nunca exceção sem
+  tratamento.
+- Testes T-IO e T-WRAP: a saída do motor bate com a regex em 50 posições; um motor "falso" que
+  imprime lixo faz o wrapper devolver um lance legal; timeout simulado devolve lance legal; FEN
+  inválido e posição de mate são tratados sem traceback.
+
+────────────────────────────────────────
+J. MAKEFILE, TESTES E HIGIENE DO REPOSITÓRIO
+────────────────────────────────────────
+- SRC inclui todos os módulos (main, bitboard, position, movegen, evaluation, search, tournament).
+- Alvos: `all`, `test`, `asan`, `valgrind`, `clean`, `distclean`.
+  `test` compila os testes de C e roda os testes de Python, e termina com "N/N testes passaram".
+  `asan` compila com -fsanitize=address,undefined e roda os testes. `valgrind` roda os testes sob
+  Valgrind, ou imprime "VALGRIND AUSENTE: etapa pulada" sem fingir sucesso.
+- `clean` remove só artefatos de build (.o e binário). Arquivos de pesos ficam em `weights/` e só
+  `distclean` os apaga, com aviso.
+- Popcount: usar `__builtin_popcountll` com -mpopcnt quando disponível e, caso contrário, um
+  fallback portátil escolhido em tempo de compilação.
+- .gitignore com .o, binários, `weights/` e arquivos temporários. Nenhum artefato de build é
+  entregue junto do código-fonte.
+- Pasta tests/ com: test_attacks.c, test_fen.c, test_movegen.c, test_perft.c, test_game_end.c,
+  test_search.c, test_weights.c, test_tournament.c, test_weights_manager.py, test_wrapper.py.
+- Teste de ausência de arquivos vazios e de código duplicado: nenhum .c/.h do Makefile com
+  0 bytes; nenhuma função definida duas vezes (a compilação com -Wall -Werror já detecta).
+
+────────────────────────────────────────
+K. DOCUMENTAÇÃO (skills.md) — O QUE É PROIBIDO AFIRMAR SEM TESTE
+────────────────────────────────────────
+- "Implementation Complete", "verified" ou um item marcado [x] só são permitidos com o comando
+  de teste correspondente e a sua saída registrados.
+- Não afirmar sem medição: tamanho do binário, uso de RAM e tempo por lance. Usar números
+  medidos (ferramentas: `size`/`ls -l`, `/usr/bin/time -v`, cronômetro no próprio motor). Estimativas
+  vão em campo rotulado "estimado".
+- Não afirmar que o gerador de lances, os ataques ou o fim de jogo estão corretos sem os resultados
+  de T-ATK, T-GEN, perft e T-END.
+- Não chamar a estrutura de Strategy de Template Method (seção G).
+- Não descrever a CLI como UCI. Descrever os modos reais (jogar, --list-moves, --perft,
+  --tournament).
+- Obrigatório incluir: tabela de status por requisito (G1–G9 e cada teste), com PASSOU / FALHOU /
+  NÃO IMPLEMENTADO, o comando e a saída resumida; endpoint e tamanho da amostra usados na API;
+  como a estrutura do minifish foi adaptada e por quê; quais defeitos foram encontrados e corrigidos
+  (incluindo as máscaras de peão, a captura de peça própria, a saída do motor e o torneio simulado);
+  as tentativas, o que precisou ser refeito, o que não foi finalizado e as melhorias futuras.

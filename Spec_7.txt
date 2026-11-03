@@ -1,0 +1,37 @@
+
+1. EN PASSANT E FEN
+- make_move: após avanço duplo, casa de en passant = branco to−8, preto to+8.
+- load_fen: casa = (rank−1)*8 + file ("d3" = 19).
+- Gerar a captura en passant; remover o peão capturado.
+ 
+2. ROQUE E PROMOÇÃO
+- Gerar roque (direito presente, casas vazias, rei sem xeque nem casa atacada no caminho).
+- Perder o direito ao capturar torre na casa de origem.
+- Promoção em UCI: 1=n, 2=b, 3=r, 4=q (mesma ordem de PieceType).
+- Perft esperado: inicial d3=8902, d4=197281, d5=4865609; Kiwipete d1=48, d2=2039, d3=97862, d4=4085603; pos3 d2=191, d5=674624.
+ 
+3. BUSCA
+- Reiniciar o melhor escore a cada profundidade.
+- Controle de tempo real (time_limit_ms com relógio); usar hooks.evaluate.
+- Ordenar lances sem captura (ex.: lance da iteração anterior primeiro).
+ 
+4. TORNEIO
+- Juiz com vetor próprio alocado; nunca dar free em vetor estático.
+- Vencedor pelo resultado real (mate: vence quem não está a jogar; empate = empate).
+- Atualizar moves_played, draws, losses; contar lances e sub-ótimos de cada modelo no seu próprio contador.
+- Comparar v_best com −v_played.
+- winrate = (V + 0,5·E) ÷ partidas do modelo.
+- Livro de aberturas curto; juiz com material e tabelas de casas.
+- Com 2 modelos, terminar em menos de 60 s (reduzir profundidade ou lances se necessário).
+ 
+5. PESOS E AVALIAÇÃO
+- weights_manager.py usa a API (sample_size real) ou aborta; origem 0 só com ajuste real; sem API exige --synthetic.
+- hf_evaluate usa os 4 termos simples.
+- check_game_over: repetição tripla e bispo×bispo de mesma cor.
+ 
+6. BUILD, TESTES E WRAPPER
+- Zero warnings (-Wall -Wextra). Makefile na mesma pasta dos fontes, com alvos test, asan, valgrind, clean, distclean.
+- Corrigir as casas em test_attacks.c (a2→b3 = 17; h2→g3 = 22; h7→g6 = 46; cavalo a1: b3 = 17, c2 = 10).
+- Criar testes: perft, fim de jogo, busca, pesos, torneio, wrapper. `make test` imprime "N/N testes passaram".
+- Wrapper: validar legalidade pelo --list-moves; contingência legal; achar o chess_engine a partir do local real do binário.
+- skills.md: PASS só com comando e saída reais.

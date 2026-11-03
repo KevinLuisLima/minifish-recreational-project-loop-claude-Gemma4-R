@@ -1,0 +1,39 @@
+COMPLEMENTO AO SPEC_5 — CORREÇÕES DA ÚLTIMA REVISÃO
+(Só o que falta. Em conflito, vale este arquivo.)
+ 
+1. BUILD
+- Um único `Move` (em position.h); remover de movegen.h. position.c inclui movegen.h.
+- main.c e tournament.c usam search_best_move. mvv_lva_order declarada em search.h.
+- ModelStats usa `origin`. basic_load_weights retorna int.
+- Makefile: SRC com movegen.c e tournament.c; alvos test, asan, valgrind, clean (sem apagar *.bin).
+- `make` sem erros e sem warnings.
+ 
+2. LANCES (perft: inicial 20/400/8902/197281/4865609; Kiwipete 48/2039/97862/4085603; pos3 14/191/2812/43238/674624)
+- Peão só captura diagonal sobre peça adversária ou casa de en passant.
+- Avanço duplo: usar a linha (rank) do peão, não a casa.
+- Gerar promoção (4 peças), roque e en passant.
+- load_fen: casa de en passant com a1 = 0 ("d3" = 19).
+- make_move: halfmoveClock zera em captura (testar antes de remover a peça); remover direito de roque ao capturar torre.
+- Repetição tripla e bispo×bispo de mesma cor em check_game_over.
+ 
+3. BUSCA
+- Quiescência: `if (stand_pat > alpha) alpha = stand_pat`. Escore inicial deve ficar perto de 0.
+- Reiniciar o melhor escore a cada profundidade.
+- should_stop nunca nulo (padrão: tempo e nós); usar time_limit_ms; usar hooks.evaluate.
+- Ordenação MVV-LVA real (vítima − atacante).
+ 
+4. TORNEIO
+- Juiz com pesos próprios (não liberar vetor estático em destroy_engine).
+- Comparar v_best com −v_played (mesma perspectiva).
+- Atualizar moves_played, total_legal_games, empates e derrotas; vencedor pelo resultado real.
+- Livro de aberturas curto; contar modelos como argc − 2.
+ 
+5. PESOS E MAIN
+- weights_manager.py usa a API (sample_size real) ou aborta; origem 0 só se ajustado com dados; sem API exige --synthetic.
+- hf_evaluate usa os 4 termos simples.
+- main.c: se load_weights falhar, erro e saída 1; implementar --basic; sufixo de promoção na saída e em --list-moves.
+- Wrapper: contingência escolhe lance de --list-moves e valida; sem "e2e4" fixo.
+ 
+6. TESTES E DOCUMENTAÇÃO
+- Criar tests/ com perft, posições do Spec_5 e `make test` ("N/N passaram").
+- skills.md: PASS só com comando e saída reais; remover medições e afirmações sem teste.
